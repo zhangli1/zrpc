@@ -5,6 +5,7 @@
 *.cfg
 .env
 .DS_Store
+*debug*
 *.code-workspace
 application/config.php
 application/database.php

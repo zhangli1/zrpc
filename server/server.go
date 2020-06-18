@@ -11,11 +11,7 @@ import (
 	"reflect"
 	"time"
 	"zrpc/lib"
-
-	"github.com/sirupsen/logrus"
 )
-
-var Log = logrus.New()
 
 func doConn(conn net.Conn) {
 	var (
@@ -24,7 +20,7 @@ func doConn(conn net.Conn) {
 		buffer    = bytes.NewBuffer(make([]byte, 0, BUF_SIZE)) //buffer用来缓存读取到的数据
 	)
 
-	var foo lib.Foo
+	var req lib.Request
 
 	for {
 		readBytes := make([]byte, BUF_SIZE)
@@ -58,19 +54,20 @@ func doConn(conn net.Conn) {
 				body := make([]byte, bodyLen)
 				_, _ = buffer.Read(body)
 
-				_, err = foo.UnmarshalMsg(body)
+				_, err = req.UnmarshalMsg(body)
+
 				if err != nil {
 					fmt.Println(err)
 				} else {
-					fmt.Println("content", foo.FuncName, foo.Request, foo.Response)
-					Log.Info(fmt.Sprintf("%s %s %v %v", "content", foo.FuncName, foo.Request, foo.Response))
+					fmt.Println(req.Id, "content2", req.FuncName, req.RequestMap)
+					lib.Log.Info(fmt.Sprintf("%s %s %s %v %v", req.Id, "content", req.FuncName, req.RequestMap))
 
-					Call(conn, foo.FuncName, foo.Request)
+					Call(conn, req)
 				}
 
 				//fmt.Println(string(body))
 			} else {
-				//fmt.Println("break body", buffer.Len())
+				//fmt.Println("break body", buffer.Len(), string(readBytes))
 				break
 			}
 		}
@@ -86,10 +83,9 @@ type ControllerMapsType map[string]reflect.Value
 //声明控制器函数Map类型变量
 var ControllerMaps ControllerMapsType
 
-func Call(conn net.Conn, method string, request map[string]string) {
-	var foo lib.Foo
+func Call(conn net.Conn, req lib.Request) {
 	crMap := make(ControllerMapsType, 0)
-	vf := reflect.ValueOf(&foo)
+	vf := reflect.ValueOf(&req)
 	vft := vf.Type()
 
 	mNum := vf.NumMethod()
@@ -98,33 +94,34 @@ func Call(conn net.Conn, method string, request map[string]string) {
 		crMap[mName] = vf.Method(i)
 	}
 
-	testStr := request
-	parms := []reflect.Value{reflect.ValueOf(conn), reflect.ValueOf(testStr)}
+	parms := []reflect.Value{reflect.ValueOf(conn), reflect.ValueOf(req)}
 	glib.Try(
 		func() {
-			crMap[method].Call(parms)
+			crMap[req.FuncName].Call(parms)
 		},
 		func(e interface{}) {
-			Log.Error("funcName", method, " ERROR:", e)
+			lib.Log.Error("funcName", req.FuncName, " ERROR:", e)
 		})
 }
 
 func init() {
 	path, _ := os.Getwd()
-	lib.ConfigLocalFilesystemLogger(Log, path, "log/go.log", 24*30*time.Hour, 1*time.Hour)
+	//lib.Log.SetOutput(lib.Log.Writer())
+	lib.Log.SetReportCaller(true)
+	lib.ConfigLocalFilesystemLogger(lib.Log, path, "log/go.log", 24*30*time.Hour, 1*time.Hour)
 }
 
 func startup(host string, port string) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", host, port))
 	if err != nil {
-		Log.Fatal(err)
+		lib.Log.Fatal(err)
 		return
 	}
-	Log.Info("start listening on ", host, ":", port)
+	lib.Log.Info("start listening on ", host, ":", port)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			Log.Fatal(err)
+			lib.Log.Fatal(err)
 			return
 		}
 		go doConn(conn)
