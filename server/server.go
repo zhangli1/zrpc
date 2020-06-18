@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	glib "lib"
 	"net"
 	"os"
 	"reflect"
@@ -99,14 +100,18 @@ func Call(conn net.Conn, method string, request map[string]string) {
 
 	testStr := request
 	parms := []reflect.Value{reflect.ValueOf(conn), reflect.ValueOf(testStr)}
-	crMap[method].Call(parms)
-
+	glib.Try(
+		func() {
+			crMap[method].Call(parms)
+		},
+		func(e interface{}) {
+			Log.Error("funcName", method, " ERROR:", e)
+		})
 }
 
 func init() {
 	path, _ := os.Getwd()
 	lib.ConfigLocalFilesystemLogger(Log, path, "log/go.log", 24*30*time.Hour, 1*time.Hour)
-	Log.Info("iaaaaa")
 }
 
 func startup(host string, port string) {
@@ -115,7 +120,7 @@ func startup(host string, port string) {
 		Log.Fatal(err)
 		return
 	}
-	Log.Info("start listening on 1234")
+	Log.Info("start listening on ", host, ":", port)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {

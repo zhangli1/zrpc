@@ -1,12 +1,13 @@
 package lib
 
 import (
-	"fmt"
+	glib "lib"
 	"net"
 )
 
 func (foo Foo) Test(conn net.Conn, request map[string]string) interface{} {
-	fmt.Println("hahaha", request)
-	_, _ = conn.Write([]byte("hahaha"))
+	//Log.Info(request)
+	str := glib.MapToJson(request)
+	_, _ = conn.Write([]byte(str))
 	return request
 }
