@@ -11,7 +11,7 @@ import (
 func handleConn2(conn net.Conn) {
 	var req lib.Request
 	var res lib.Response
-	lib.Receive(conn, req, res, lib.RequestSendType)
+	lib.Receive(conn, req, res, lib.ResponseSendType)
 	//defer conn.Close()
 	//defer fmt.Println("关闭")
 	//fmt.Println("新连接：", conn.RemoteAddr())
