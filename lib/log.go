@@ -33,6 +33,6 @@ func ConfigLocalFilesystemLogger(Log *log.Logger, logPath string, logFileName st
 		log.ErrorLevel: writer,
 		log.FatalLevel: writer,
 		log.PanicLevel: writer,
-	}, &log.TextFormatter{})
+	}, &log.TextFormatter{DisableColors: true})
 	Log.AddHook(lfHook)
 }

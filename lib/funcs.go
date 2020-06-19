@@ -15,9 +15,11 @@ import (
 type SendType int
 
 const (
-	RequestSendType SendType = iota
-	ResponseSendType
+	ClientSendType SendType = iota
+	ServerSendType
 )
+
+var List = make(map[string]Request, 0)
 
 //序列化+发送
 func Send(conn net.Conn, req Request, res Response, sendType SendType) {
@@ -25,11 +27,7 @@ func Send(conn net.Conn, req Request, res Response, sendType SendType) {
 	binary.BigEndian.PutUint32(magicNum, 0x123456)
 
 	var bts []byte
-	//if RequestSendType == RequestSendType {
 	bts, _ = req.MarshalMsg(nil)
-	/*} else {
-		bts, _ = res.MarshalMsg(nil)
-	}*/
 	headSize := len(bts)
 	head := make([]byte, 2)
 	binary.BigEndian.PutUint16(head, uint16(headSize))
@@ -37,17 +35,12 @@ func Send(conn net.Conn, req Request, res Response, sendType SendType) {
 	packetBuf.Write(head)
 	packetBuf.Write(bts)
 	_, _ = conn.Write(packetBuf.Bytes())
-	fmt.Println("server send")
 }
 
 func (req Request) Test(conn net.Conn, res Response) interface{} {
 	Log.Info(res)
-	//res.Id = res.Id
-	//res.FuncName = res.FuncName
-	//res.ResponseMap = req.RequestMap
 	req.RequestStatusCode = Suc
-	Send(conn, req, res, ResponseSendType)
-	fmt.Println("req status", res)
+	Send(conn, req, res, ServerSendType)
 	return res
 }
 
@@ -70,11 +63,19 @@ func Receive(conn net.Conn, req Request, res Response, sendType SendType) {
 	var buf [65542]byte // 由于 标识数据包长度 的只有两个字节 故数据包最大为 2^16+4(魔数)+2(长度标识)
 
 	for {
-		fmt.Println("receive.............")
+		//fmt.Println("client receive.............", sendType, len(List))
+		if sendType == ClientSendType && len(List) < 1 {
+			//fmt.Println("client receive.............")
+			break
+		}
+		//fmt.Println("receive.............")
 		n, err := conn.Read(buf[0:])
 		result.Write(buf[0:n])
 		if err != nil {
 			if err == io.EOF {
+				if sendType == ClientSendType {
+					fmt.Println("client receive")
+				}
 				time.Sleep(1 * time.Second)
 				continue
 			} else {
@@ -87,23 +88,18 @@ func Receive(conn net.Conn, req Request, res Response, sendType SendType) {
 			for scanner.Scan() {
 				fmt.Println("recv:", string(scanner.Bytes()[6:]))
 				body := scanner.Bytes()[6:]
-				//if sendType == RequestSendType {
 				_, err = req.UnmarshalMsg(body)
-				//} else {
-				//	_, err = res.UnmarshalMsg(body)
-				//}
-
 				if err != nil {
 					fmt.Println(err)
 				} else {
-					//if sendType == RequestSendType {
 					Log.Info(fmt.Sprintf("%s %s %s %v %v", req.Id, "content", req.FuncName, req.RequestMap, req.RequestStatusCode))
-					if sendType == ResponseSendType {
+					if sendType == ServerSendType {
 						Call(conn, req, res)
+					} else {
+						//fmt.Println("client delete", req)
+						delete(List, req.Id)
 					}
-					/*} else {
-						Log.Info(fmt.Sprintf("%s %s %s %v %v", res.Id, "content", res.FuncName, res.ResponseMap, res.ResponseStatusCode))
-					}*/
+
 				}
 			}
 		}
