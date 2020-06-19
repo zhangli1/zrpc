@@ -1,19 +1,57 @@
 package server
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
-	"io"
-	glib "lib"
 	"net"
 	"os"
-	"reflect"
 	"time"
 	"zrpc/lib"
 )
 
-func doConn(conn net.Conn) {
+func handleConn2(conn net.Conn) {
+	var req lib.Request
+	var res lib.Response
+	lib.Receive(conn, req, res, lib.RequestSendType)
+	//defer conn.Close()
+	//defer fmt.Println("关闭")
+	//fmt.Println("新连接：", conn.RemoteAddr())
+	/*result := bytes.NewBuffer(nil)
+	var buf [65542]byte // 由于 标识数据包长度 的只有两个字节 故数据包最大为 2^16+4(魔数)+2(长度标识)
+
+	var req lib.Request
+	for {
+		n, err := conn.Read(buf[0:])
+		result.Write(buf[0:n])
+		if err != nil {
+			if err == io.EOF {
+				continue
+			} else {
+				fmt.Println("read err:", err)
+				break
+			}
+		} else {
+			scanner := bufio.NewScanner(result)
+			scanner.Split(packetSlitFunc)
+			for scanner.Scan() {
+				fmt.Println("recv:", string(scanner.Bytes()[6:]))
+				body := scanner.Bytes()[6:]
+				_, err = req.UnmarshalMsg(body)
+
+				if err != nil {
+					fmt.Println(err)
+				} else {
+					fmt.Println(req.Id, "content2", req.FuncName, req.RequestMap)
+					lib.Log.Info(fmt.Sprintf("%s %s %s %v %v", req.Id, "content", req.FuncName, req.RequestMap))
+
+					Call(conn, req)
+				}
+			}
+		}
+		result.Reset()
+	}*/
+}
+
+/*func doConn(conn net.Conn) {
 	var (
 		BUF_SIZE  = 65538
 		HEAD_SIZE = 2
@@ -48,7 +86,7 @@ func doConn(conn net.Conn) {
 			_, _ = buffer.Read(head)
 
 			bodyLen = int(binary.BigEndian.Uint16(head))
-			fmt.Println("bodyLen", bodyLen)
+			fmt.Println("buffer.Len()", buffer.Len(), "bodyLen", bodyLen)
 
 			if buffer.Len() >= bodyLen && bodyLen > 0 {
 				body := make([]byte, bodyLen)
@@ -67,7 +105,8 @@ func doConn(conn net.Conn) {
 
 				//fmt.Println(string(body))
 			} else {
-				//fmt.Println("break body", buffer.Len(), string(readBytes))
+				fmt.Println("break body", buffer.Len(), string(readBytes))
+				buffer.Reset()
 				break
 			}
 		}
@@ -75,34 +114,7 @@ func doConn(conn net.Conn) {
 		Ready = true
 
 	}
-}
-
-//定义控制器函数Map类型，便于后续快捷使用
-type ControllerMapsType map[string]reflect.Value
-
-//声明控制器函数Map类型变量
-var ControllerMaps ControllerMapsType
-
-func Call(conn net.Conn, req lib.Request) {
-	crMap := make(ControllerMapsType, 0)
-	vf := reflect.ValueOf(&req)
-	vft := vf.Type()
-
-	mNum := vf.NumMethod()
-	for i := 0; i < mNum; i++ {
-		mName := vft.Method(i).Name
-		crMap[mName] = vf.Method(i)
-	}
-
-	parms := []reflect.Value{reflect.ValueOf(conn), reflect.ValueOf(req)}
-	glib.Try(
-		func() {
-			crMap[req.FuncName].Call(parms)
-		},
-		func(e interface{}) {
-			lib.Log.Error("funcName", req.FuncName, " ERROR:", e)
-		})
-}
+}*/
 
 func init() {
 	path, _ := os.Getwd()
@@ -124,6 +136,7 @@ func startup(host string, port string) {
 			lib.Log.Fatal(err)
 			return
 		}
-		go doConn(conn)
+		//go doConn(conn)
+		go handleConn2(conn)
 	}
 }

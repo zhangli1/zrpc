@@ -5,22 +5,21 @@ package lib
 type State int
 
 const (
-    Wait State = iota
-    Fail
-    Suc
+	Wait State = iota
+	Fail
+	Suc
 )
 
 type Request struct {
-	Id       string
-	FuncName string
-	RequestMap  map[string]string
-    RequestStatusCode  State
+	Id                string
+	FuncName          string
+	RequestMap        map[string]string
+	RequestStatusCode State
 }
 
 type Response struct {
-	Id       string
-	FuncName string
-	ResponseMap interface{}
-    ResponseStatusCode  State
+	Id                 string
+	FuncName           string
+	ResponseMap        interface{}
+	ResponseStatusCode State
 }
-
