@@ -11,7 +11,8 @@ import (
 func handleConn2(conn net.Conn) {
 	var req lib.Request
 	var res lib.Response
-	lib.Receive(conn, req, res, lib.ServerSendType)
+
+	lib.Receive(conn, req, res, lib.ServerSendType, nil)
 }
 
 func init() {

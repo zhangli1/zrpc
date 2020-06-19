@@ -7,7 +7,7 @@ import (
     "zrpc/lib"
 )
 
-var MaxNum int = 500
+var MaxNum int = 50000
 
 func main() {
 	conn, _ := net.Dial("tcp", ":1234")
@@ -32,13 +32,15 @@ func main() {
             fmt.Println(req)
 
             lib.Send(conn, req, res, lib.ClientSendType)
-            lib.List[req.Id] = req
+            //lib.List[req.Id] = req
         }()
     }
-    lib.Receive(conn, req, res, lib.ClientSendType)
+    list := make(map[string]lib.Request, MaxNum)
+    go lib.Receive(conn, req, res, lib.ClientSendType, list)
 
     for {
-        if len(lib.List) < 1 {
+        fmt.Println(list)
+        if len(list) >= MaxNum {
             fmt.Println("end...")
             break
         }

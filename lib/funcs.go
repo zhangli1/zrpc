@@ -19,8 +19,6 @@ const (
 	ServerSendType
 )
 
-var List = make(map[string]Request, 0)
-
 //序列化+发送
 func Send(conn net.Conn, req Request, res Response, sendType SendType) {
 	magicNum := make([]byte, 4)
@@ -38,8 +36,8 @@ func Send(conn net.Conn, req Request, res Response, sendType SendType) {
 }
 
 func (req Request) Test(conn net.Conn, res Response) interface{} {
-	Log.Info(res)
 	req.RequestStatusCode = Suc
+	Log.Info(req)
 	Send(conn, req, res, ServerSendType)
 	return res
 }
@@ -58,16 +56,16 @@ func packetSlitFunc(data []byte, atEOF bool) (advance int, token []byte, err err
 	return
 }
 
-func Receive(conn net.Conn, req Request, res Response, sendType SendType) {
+func Receive(conn net.Conn, req Request, res Response, sendType SendType, list map[string]Request) {
 	result := bytes.NewBuffer(nil)
 	var buf [65542]byte // 由于 标识数据包长度 的只有两个字节 故数据包最大为 2^16+4(魔数)+2(长度标识)
 
 	for {
-		//fmt.Println("client receive.............", sendType, len(List))
-		if sendType == ClientSendType && len(List) < 1 {
-			//fmt.Println("client receive.............")
+		//fmt.Println("client receive.............", sendType, len(list))
+		/*if sendType == ClientSendType && len(list) < 1 {
+			fmt.Println("client receive22222.............")
 			break
-		}
+		}*/
 		//fmt.Println("receive.............")
 		n, err := conn.Read(buf[0:])
 		result.Write(buf[0:n])
@@ -96,8 +94,10 @@ func Receive(conn net.Conn, req Request, res Response, sendType SendType) {
 					if sendType == ServerSendType {
 						Call(conn, req, res)
 					} else {
-						//fmt.Println("client delete", req)
-						delete(List, req.Id)
+
+						list[req.Id] = req
+						//fmt.Println("client map", list)
+						//delete(List, req.Id)
 					}
 
 				}
