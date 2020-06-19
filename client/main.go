@@ -7,10 +7,9 @@ import (
     "zrpc/lib"
 )
 
-var MaxNum int = 2
+var MaxNum int = 500
 
 func main() {
-    list := make(map[string]lib.Request, MaxNum)
 	conn, _ := net.Dial("tcp", ":1234")
     //defer conn.Close()
     // 发送超时
@@ -32,11 +31,18 @@ func main() {
             req.RequestMap = request
             fmt.Println(req)
 
-            lib.Send(conn, req, res, lib.RequestSendType)
-            list[req.Id] = req
+            lib.Send(conn, req, res, lib.ClientSendType)
+            lib.List[req.Id] = req
         }()
     }
-    //lib.Receive(conn, req, res, lib.ResponseSendType)
-    lib.Receive(conn, req, res, lib.RequestSendType)
+    lib.Receive(conn, req, res, lib.ClientSendType)
+
+    for {
+        if len(lib.List) < 1 {
+            fmt.Println("end...")
+            break
+        }
+        time.Sleep(1 * time.Second)
+    }
 }
 
